@@ -1,5 +1,7 @@
 const axios = require("axios"); // 發送 HTTP 請求
 const cheerio = require("cheerio"); // 解析 HTML
+const fs = require("fs");
+
 // import OpenAI from "openai"; // Import the OpenAI class
 
 /* 設置 OpenAI API
@@ -13,48 +15,40 @@ const openai = new OpenAIApi(configuration);
 const url =
   "https://world.mirror.xyz/AzD5skm2IrCVnNOHkRNOsOTxAyBLtJ4zm71QoFNqQwg";
 
-// 定義翻譯函數，通過 ChatGPT API
-async function translateTextWithChatGPT(text, targetLanguage) {
+async function fetchArticleContent(url) {
   try {
-    const prompt = `Please translate the following text to ${targetLanguage}: "${text}"`;
-    const response = await openai.createCompletion({
-      model: "text-davinci-003", // 可以使用最新的模型
-      prompt: prompt,
-      max_tokens: 1000,
+    const response = await axios.get(url);
+    const html = response.data;
+    const $ = cheerio.load(html);
+
+    // Get the title and convert to Markdown header
+    const title = $("title").text();
+    const markdownTitle = `# ${title}\n\n`; // Markdown 標題
+
+    // Get the main article content
+    const paragraphs = [];
+    $("p").each((index, element) => {
+      paragraphs.push($(element).text());
     });
-    return response.data.choices[0].text.trim(); // 提取翻譯結果
+
+    // 合併段落
+    const content = paragraphs.join("\n\n"); // Markdown 以兩個換行符號區分段落
+
+    // 合併標題和內容
+    const markdownContent = markdownTitle + content;
+
+    // 將內容寫入 .md 檔案
+    fs.writeFile("article.md", markdownContent, "utf8", (err) => {
+      if (err) {
+        console.error("寫入檔案失敗:", err);
+      } else {
+        console.log("文章已成功儲存到 article.md");
+      }
+    });
   } catch (error) {
-    console.error("翻譯錯誤:", error);
+    console.error("抓取失敗:", error);
   }
 }
 
-async function fetchArticleContent() {
-  try {
-    await axios
-      .get(url)
-      .then((response) => {
-        const html = response.data;
-        const $ = cheerio.load(html);
-
-        // Get the title
-        const title = $("title").text();
-
-        // Get the main article content
-        const paragraphs = [];
-        $("p").each((index, element) => {
-          paragraphs.push($(element).text());
-        });
-
-        console.log("Title:", title);
-        console.log("Content:", paragraphs);
-      })
-      .catch((error) => {
-        console.error("Error fetching the page:", error);
-      });
-  } catch (error) {
-    console.error("Error fetching article:", error);
-  }
-}
-
-// 執行爬蟲
-fetchArticleContent();
+// 調用函數
+fetchArticleContent(url);

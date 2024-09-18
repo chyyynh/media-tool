@@ -1,0 +1,31 @@
+# Season Two: Hardware — The New World
+
+by vera
+
+For reasons that will soon become clear to you, at Lattice we’ve been discussing the well-known Alan Kay quote: “People who are really serious about software should make their own hardware.”
+
+The quote, which has gained notoriety (to the point of being self-evident) in the post-iOS, Tesla, Bitcoin ASICs, NVIDIA AI GPU, era we live in, has origins that are actually quite difficult to trace. After some searching, I found this blogpost from early Apple employee Andy Hertzfeld, with notes on a talk Alan Kay delivered at the 1982 Creative Think conference. From what I can tell, there are no records of the full talk, but the quote is in Hertzfeld’s notes, along with other well-known Alan Kay quips like “the best way to predict the future is to invent it” and lesser-known ones like “the whole notion of 'programming language' is wrong.”
+
+Back to the original quote: “People who are really serious about software should make their own hardware.” What would make Kay assert this, in 1982 — two years before MacOS was released, and decades before companies like Tesla and NVIDIA were founded? There were no clear winners in software or hardware at the time: personal computing was still a dream held only by the most ardent technologists, and computing itself was largely relegated to mainframes. It’s worth looking at what Kay was building around the same time that he made this observation — and what might have informed this now-famous claim.
+
+In the years leading up to (and following) his Creative Think talk, Kay worked on the “Dynabook”, a proto-laptop that never quite made its way into production. The Dynabook was meant to be “a personal computer for children of all ages” — a tool to make the power of the PC accessible to anyone. It was the first piece of hardware to run Smalltalk, a programming language and IDE whose object-oriented programming paradigm was a break from the imperative styles that were more popular at the time. In the words of Kay, Smalltalk was “more more powerful and easier to use for the naive programmer than the more conventional ‘noun/verb structure/function’ primitive ideas of most current programming systems.”
+
+These were not empty words. In the 1970’s, Kay and other researchers at his Xerox PARC Lab developed the “Interim Dynabook” — a larger and less portable version of the original Dynabook design. They gave children access to the computer, and found that in very little time, kids as young as 5 were able to make drawing games, flight simulators, and a space war game. The IDE provided by Smalltalk had a native GUI to render simulations, and the Dynabook hardware itself had user-friendly attributes like a mouse (which was less popular on hardware at the time that only permitted interaction via CLI). This new combination of hardware (the Interim Dynabook) and software (Smalltalk) had enabled new applications, which would have been unfeasible to create in more challenging programming environments.
+
+Anyone who interacted with the Interim Dynabook was temporarily living in the future: the user-centric combination of hardware and software embodied by the Dynabook went on to influence laptops, the iPhone and iPad, and other modern technology. The big lesson from the Dynabook is that when you combine hardware and software that are uniquely tailor-made for one another, you can unlock breakthroughs that are decades ahead of their time.
+
+But how does this apply to the EVM, onchain applications, or anything we’re doing at Lattice?
+
+Some people might think of blockchain “hardware” as the physical nodes that runs consensus or execution clients, or even hardware to accelerate advanced cryptography found in zero-knowledge proofs. Our angle is slightly different: blockchains — which are computers — are hardware themselves.
+
+For almost two years, Lattice has been building MUD, an engine to make developing ambitious applications (or “software”) on the EVM easier and more intuitive. Like the people lucky enough to use the Interim Dynabook in the 1970’s, we have been finding ways to live in the future: an era when onchain applications aren’t constrained by the hardware on which they run.
+
+While it took several decades for the Dynabook prototype to lead to technology like the iPhone, the feedback loops between design, iteration, user-testing, and implementation are fortunately much shorter today. In less than two years, MUD has evolved from an in-house engine born from our personal struggles building onchain games, to open-source software powering games like Sky Strife, OPCraft, Words3, Primodium, draw.tech, Gaul, THIS CURSED MACHINE, and many more applications. Along the way, we’ve played with the hardware running some of these applications: we’ve deployed local nodes with gas limits of up to 1 billion, launched OP Craft last year on the one of the first Optimism Bedrock testnets, and run a custom testnet used by Sky Strife, Primodium, Small Brain Games, and other MUD builders.
+
+For Season Two of The New World, we will be exploring Hardware. Over the past two years, we’ve gone from playing with hardware, to developing strong opinions informed by serious experimentation around what ideal hardware for autonomous worlds might look like. Now, it’s time to share our findings, and hear from you about your own. Let’s all live in the future.
+
+If this sounds interesting to you, stay tuned and subscribe to our Mirror. If you’d like to contribute, email me at vera@lattice.xyz – we’ll be accepting submissions from developers and researchers who are interested in these questions. To get you started, we’ve brainstormed a list of words and concepts that might be helpful as you explore.
+
+Hardware: ZKML Games, Ethereum Infrastructure Costs Are a Lie, Human-Machine Interaction, Everything is an Interface, Indexing Costs Are a Lie, Your Favorite Abandonware, WE NEED MORE OPCODES, Parallelizing the EVM (with Hardware, not Digital Physics), ZK Coprocessors, Scaling in All Directions, ethOS, Alignment Is a Lie (or is it?), MUD-Native Block Explorers
+
+To learn more about Lattice and MUD, visit our website, read our documentation, or join our Discord server
