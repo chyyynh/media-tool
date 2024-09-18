@@ -1,15 +1,13 @@
 const axios = require("axios"); // 發送 HTTP 請求
 const cheerio = require("cheerio"); // 解析 HTML
-const fs = require("fs");
+const fs = require("fs"); // 寫入檔案
+require("dotenv").config(); // 載入環境變數
+const OpenAI = require("openai"); // 引入 OpenAI API
 
-// import OpenAI from "openai"; // Import the OpenAI class
-
-/* 設置 OpenAI API
-const configuration = new Configuration({
-  apiKey: "你的 OpenAI API 金鑰",
+// 設置 OpenAI API
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY, // 使用環境變數中的 API key
 });
-const openai = new OpenAIApi(configuration);
-*/
 
 // 目標網頁 URL
 const url =
@@ -37,8 +35,24 @@ async function fetchArticleContent(url) {
     // 合併標題和內容
     const markdownContent = markdownTitle + content;
 
+    // 翻譯文章內容
+    const targetLanguage = "zh";
+    const translationResponse = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `Translate the following text to ${targetLanguage}`,
+        },
+        { role: "user", content: content }, // content 是抓取的文章內容
+      ],
+    });
+
+    const translatedContent =
+      translationResponse.data.choices[0].message.content;
+
     // 將內容寫入 .md 檔案
-    fs.writeFile("article.md", markdownContent, "utf8", (err) => {
+    fs.writeFile("article.md", translatedContent, "utf8", (err) => {
       if (err) {
         console.error("寫入檔案失敗:", err);
       } else {
