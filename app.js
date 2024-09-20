@@ -17,10 +17,6 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 const HACKMD_API_URL = "https://api.hackmd.io/v1/notes";
 const HACKMD_API_TOKEN = process.env.HACKMD_API_TOKEN; // HackMD API Token
 
-// 目標網頁 URL
-const url =
-  "https://world.mirror.xyz/AzD5skm2IrCVnNOHkRNOsOTxAyBLtJ4zm71QoFNqQwg";
-
 async function fetchArticleContent(url) {
   try {
     const response = await axios.get(url);
