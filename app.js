@@ -23,18 +23,35 @@ async function fetchArticleContent(url) {
     const html = response.data;
     const $ = cheerio.load(html);
 
+    // Create an array to hold the mixed content (text and images)
+    const contentArray = [];
+
     // Get the title and convert to Markdown header
     const title = $("title").text();
     const Title = `# ${title}\n\n`; // Markdown 標題
 
-    // Get the main article content
-    const paragraphs = [];
-    $("p").each((index, element) => {
-      paragraphs.push($(element).text());
+    // 抓取所有段落和圖片，按出現順序加入
+    $("p, img").each((index, element) => {
+      if ($(element).is("p")) {
+        // 如果是段落，加入文字
+        contentArray.push($(element).text());
+      } else if ($(element).is("img")) {
+        // 如果是圖片，加入 Markdown 圖片標籤
+        let imgSrc = $(element).attr("src");
+
+        // 處理相對路徑
+        if (imgSrc && !imgSrc.startsWith("http")) {
+          imgSrc = new URL(imgSrc, url).href; // 將相對路徑轉換為絕對路徑
+        }
+
+        if (imgSrc) {
+          contentArray.push(`![Image](${imgSrc})`); // Markdown 格式圖片
+        }
+      }
     });
 
-    // 合併段落
-    const content = paragraphs.join("\n\n"); // Markdown 以兩個換行符號區分段落
+    // 將混合的內容用兩個換行符號分隔，組織成 Markdown 格式
+    const fullContent = `${Title}${contentArray.join("\n\n")}`;
 
     /* 翻譯文章內容
     const targetLanguage = "zh";
@@ -62,8 +79,8 @@ async function fetchArticleContent(url) {
     });
     */
 
-    // 返回翻譯結果
-    return `# ${title}\n\n${content}`;
+    // 返回最終的 Markdown 內容
+    return fullContent;
   } catch (error) {
     console.error("抓取失敗:", error);
   }
