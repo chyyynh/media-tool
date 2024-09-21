@@ -14,7 +14,7 @@ const openai = new OpenAI({
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
 // 設置 HackMD API Token 和 API URL
-const HACKMD_API_URL = "https://api.hackmd.io/v1/notes";
+const HACKMD_API_URL = "https://api.hackmd.io/v1/teams/funblocks/notes";
 const HACKMD_API_TOKEN = process.env.HACKMD_API_TOKEN; // HackMD API Token
 
 async function fetchArticleContent(url) {
@@ -22,6 +22,10 @@ async function fetchArticleContent(url) {
     const response = await axios.get(url);
     const html = response.data;
     const $ = cheerio.load(html);
+
+    // 將 HTML 存成檔案
+    // fs.writeFileSync("fetched_page.html", html, "utf8");
+    // console.log("HTML 已成功儲存到 fetched_page.html");
 
     // Create an array to hold the mixed content (text and images)
     const contentArray = [];
@@ -36,7 +40,6 @@ async function fetchArticleContent(url) {
         // 如果是段落，加入文字
         contentArray.push($(element).text());
       } else if ($(element).is("img")) {
-        // 如果是圖片，加入 Markdown 圖片標籤
         let imgSrc = $(element).attr("src");
 
         // 處理相對路徑
@@ -111,20 +114,6 @@ async function postToHackMD(title, content) {
     }
   } catch (error) {
     console.error("發佈到 HackMD 失敗:", error); // 更詳細的錯誤輸出
-    if (error.response) {
-      // 如果有 response，輸出詳細的 response 資訊
-      console.error("錯誤狀態碼:", error.response.status);
-      console.error("錯誤訊息:", error.response.data);
-      return `發佈到 HackMD 失敗，錯誤狀態碼: ${error.response.status}，錯誤訊息: ${error.response.data}`;
-    } else if (error.request) {
-      // 請求已發送，但沒有收到回應
-      console.error("請求發送後無回應:", error.request);
-      return "發佈到 HackMD 失敗，請求發送後無回應。";
-    } else {
-      // 其他錯誤
-      console.error("錯誤訊息:", error.message);
-      return `發佈到 HackMD 失敗，錯誤訊息: ${error.message}`;
-    }
   }
 }
 
