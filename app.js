@@ -23,6 +23,8 @@ async function fetchArticleContent(url) {
     const html = response.data;
     const $ = cheerio.load(html);
 
+    // console.log($);
+
     // 將 HTML 存成檔案
     // fs.writeFileSync("fetched_page.html", html, "utf8");
     // console.log("HTML 已成功儲存到 fetched_page.html");
@@ -41,6 +43,12 @@ async function fetchArticleContent(url) {
         contentArray.push($(element).text());
       } else if ($(element).is("img")) {
         let imgSrc = $(element).attr("src");
+        const imgId = $(element).attr("id");
+        const imgAlt = $(element).attr("alt");
+
+        // console.log(
+        //   `Image found - src: ${imgSrc}, id: ${imgId}, alt: ${imgAlt}`
+        // );
 
         // 處理相對路徑
         if (imgSrc && !imgSrc.startsWith("http")) {
@@ -83,7 +91,7 @@ async function fetchArticleContent(url) {
     */
 
     // 返回最終的 Markdown 內容
-    return fullContent;
+    return { title, content: fullContent };
   } catch (error) {
     console.error("抓取失敗:", error);
   }
@@ -107,6 +115,8 @@ async function postToHackMD(title, content) {
       }
     );
 
+    console.log(response);
+
     if (response.data && response.data.publishLink) {
       return `筆記已成功發佈！查看連結：${response.data.publishLink}`;
     } else {
@@ -125,11 +135,16 @@ bot.on("text", async (ctx) => {
   if (isValidUrl(url)) {
     ctx.reply("正在抓取文章，請稍候...");
 
-    const articleContent = await fetchArticleContent(url);
-
-    if (articleContent) {
+    const articleData = await fetchArticleContent(url);
+    const duplicatedlink = await isArticleUploaded(articleData.title);
+    if (duplicatedlink != 0) {
+      ctx.reply(`已上傳過本篇文章，文章連結: ${duplicatedlink}`);
+    } else if (articleData && articleData.content) {
       // 將文章發佈到 HackMD
-      const postResult = await postToHackMD("抓取文章", articleContent);
+      const postResult = await postToHackMD(
+        articleData.title,
+        articleData.content
+      );
 
       // 回傳 HackMD 的結果連結
       ctx.reply(postResult);
@@ -152,5 +167,39 @@ function isValidUrl(string) {
     return true;
   } catch (_) {
     return false;
+  }
+}
+
+async function isArticleUploaded(title) {
+  try {
+    const response = await axios.get(
+      `https://api.hackmd.io/v1/teams/funblocks/notes`,
+      {
+        headers: {
+          Authorization: `Bearer ${HACKMD_API_TOKEN}`, // 替換成你的 API Key
+        },
+      }
+    );
+
+    const notes = response.data; // 獲取筆記數據
+    console.log(notes); // 打印 API 回應數據
+
+    // 找到所有重複標題的筆記連結
+    const duplicateLinks = notes
+      .filter((note) => note.title === title) // 過濾出標題匹配的筆記
+      .map((note) => note.publishLink); // 獲取對應的 publishLink
+
+    console.log(duplicateLinks.join(", "));
+
+    if (duplicateLinks.length > 0) {
+      // 如果找到重複的標題，返回連結
+      return duplicateLinks.join(", "); // 返回所有重複標題的連結
+    } else {
+      // 沒有重複的標題
+      return 0; // 或者返回 null, 根據需求
+    }
+  } catch (error) {
+    console.error("檢查上傳狀態時出錯:", error);
+    return null; // 或者根據需要處理錯誤
   }
 }
