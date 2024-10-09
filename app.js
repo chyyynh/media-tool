@@ -11,15 +11,16 @@ const HACKMD_API_URL = "https://api.hackmd.io/v1/teams/funblocks/notes";
 const HACKMD_API_TOKEN = process.env.HACKMD_API_TOKEN; // HackMD API Token
 
 // Lingva Translate API 函數
-async function translateWithLingva(text, sourceLang = "en", targetLang = "zh") {
-  const lingvaUrl = `https://lingva.ml/api/v1/${sourceLang}/${targetLang}`;
+async function translateWithLingva(text) {
+  const lingvaUrl = `https://lingva.ml/api/v1/en/zh/`;
 
   try {
     // 使用 POST 請求將 text 作為請求的主體
-    const response = await axios.post(lingvaUrl, {
-      text: text, // 將需要翻譯的文本放在請求主體中
-    });
+    const response = await axios.get(
+      `${lingvaUrl}${encodeURIComponent(text.trim())}`
+    );
 
+    console.log(response.data.translation);
     // 假設 API 回應的結構未變更，這裡也需確認 API 文件
     return response.data.translation;
   } catch (error) {
@@ -36,24 +37,22 @@ async function fetchArticleContent(url) {
 
     // Create an array to hold the mixed content (text and images)
     const contentArray = [];
+    // const translatedContentArray = [];
 
     // Get the title and convert to Markdown header
     const title = $("title").text();
     const Title = `# ${title}\n\n`; // Markdown 標題
 
     // 抓取所有段落和圖片，按出現順序加入
-    $("p, img").each((index, element) => {
+    $("p, img").each(async (index, element) => {
       if ($(element).is("p")) {
         // 如果是段落，加入文字
         contentArray.push($(element).text());
+        contentArray.push(await translateWithLingva($(element).text()));
       } else if ($(element).is("img")) {
         let imgSrc = $(element).attr("src");
         const imgId = $(element).attr("id");
         const imgAlt = $(element).attr("alt");
-
-        // console.log(
-        //   `Image found - src: ${imgSrc}, id: ${imgId}, alt: ${imgAlt}`
-        // );
 
         // 處理相對路徑
         if (imgSrc && !imgSrc.startsWith("http")) {
@@ -69,18 +68,8 @@ async function fetchArticleContent(url) {
     // 將混合的內容用兩個換行符號分隔，組織成 Markdown 格式
     const fullContent = `${Title}${contentArray.join("\n\n")}`;
 
-    // 翻譯文章內容
-    const targetLanguage = "zh";
-    const translatedContent = await translateWithLingva(
-      fullContent,
-      "en",
-      targetLanguage
-    );
-
-    console.log(translatedContent);
-
     // 返回最終的 Markdown 內容
-    return { title, content: translatedContent || fullContent };
+    return { title: title, content: fullContent };
   } catch (error) {
     console.error("抓取失敗:", error);
   }
@@ -171,14 +160,11 @@ async function isArticleUploaded(title) {
     );
 
     const notes = response.data; // 獲取筆記數據
-    // console.log(notes); // 打印 API 回應數據
 
     // 找到所有重複標題的筆記連結
     const duplicateLinks = notes
       .filter((note) => note.title === title) // 過濾出標題匹配的筆記
       .map((note) => note.publishLink); // 獲取對應的 publishLink
-
-    // console.log(duplicateLinks.join(", "));
 
     if (duplicateLinks.length > 0) {
       // 如果找到重複的標題，返回連結
