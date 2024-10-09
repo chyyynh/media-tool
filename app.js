@@ -1,14 +1,7 @@
 const axios = require("axios"); // 發送 HTTP 請求
 const cheerio = require("cheerio"); // 解析 HTML
-const fs = require("fs"); // 寫入檔案
 const { Telegraf } = require("telegraf"); // Telegram Bot API
-const OpenAI = require("openai"); // 引入 OpenAI API
 require("dotenv").config(); // 載入環境變數
-
-// 設置 OpenAI API
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // 使用環境變數中的 API key
-});
 
 // 設置 telegram API
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
@@ -17,17 +10,29 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 const HACKMD_API_URL = "https://api.hackmd.io/v1/teams/funblocks/notes";
 const HACKMD_API_TOKEN = process.env.HACKMD_API_TOKEN; // HackMD API Token
 
+// Lingva Translate API 函數
+async function translateWithLingva(text, sourceLang = "en", targetLang = "zh") {
+  const lingvaUrl = `https://lingva.ml/api/v1/${sourceLang}/${targetLang}`;
+
+  try {
+    // 使用 POST 請求將 text 作為請求的主體
+    const response = await axios.post(lingvaUrl, {
+      text: text, // 將需要翻譯的文本放在請求主體中
+    });
+
+    // 假設 API 回應的結構未變更，這裡也需確認 API 文件
+    return response.data.translation;
+  } catch (error) {
+    console.error("翻譯失敗:", error);
+    return null; // 或者根據需要處理錯誤
+  }
+}
+
 async function fetchArticleContent(url) {
   try {
     const response = await axios.get(url);
     const html = response.data;
     const $ = cheerio.load(html);
-
-    // console.log($);
-
-    // 將 HTML 存成檔案
-    // fs.writeFileSync("fetched_page.html", html, "utf8");
-    // console.log("HTML 已成功儲存到 fetched_page.html");
 
     // Create an array to hold the mixed content (text and images)
     const contentArray = [];
@@ -64,34 +69,18 @@ async function fetchArticleContent(url) {
     // 將混合的內容用兩個換行符號分隔，組織成 Markdown 格式
     const fullContent = `${Title}${contentArray.join("\n\n")}`;
 
-    /* 翻譯文章內容
+    // 翻譯文章內容
     const targetLanguage = "zh";
-    const translationResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: `Translate the following text to ${targetLanguage}`,
-        },
-        { role: "user", content: content }, // content 是抓取的文章內容
-      ],
-    });
+    const translatedContent = await translateWithLingva(
+      fullContent,
+      "en",
+      targetLanguage
+    );
 
-    const translatedContent =
-      translationResponse.data.choices[0].message.content;
-
-    // 將內容寫入 .md 檔案
-    fs.writeFile("article.md", translatedContent, "utf8", (err) => {
-      if (err) {
-        console.error("寫入檔案失敗:", err);
-      } else {
-        console.log("文章已成功儲存到 article.md");
-      }
-    });
-    */
+    console.log(translatedContent);
 
     // 返回最終的 Markdown 內容
-    return { title, content: fullContent };
+    return { title, content: translatedContent || fullContent };
   } catch (error) {
     console.error("抓取失敗:", error);
   }
@@ -115,7 +104,7 @@ async function postToHackMD(title, content) {
       }
     );
 
-    console.log(response);
+    // console.log(response);
 
     if (response.data && response.data.publishLink) {
       return `筆記已成功發佈！查看連結：${response.data.publishLink}`;
@@ -182,14 +171,14 @@ async function isArticleUploaded(title) {
     );
 
     const notes = response.data; // 獲取筆記數據
-    console.log(notes); // 打印 API 回應數據
+    // console.log(notes); // 打印 API 回應數據
 
     // 找到所有重複標題的筆記連結
     const duplicateLinks = notes
       .filter((note) => note.title === title) // 過濾出標題匹配的筆記
       .map((note) => note.publishLink); // 獲取對應的 publishLink
 
-    console.log(duplicateLinks.join(", "));
+    // console.log(duplicateLinks.join(", "));
 
     if (duplicateLinks.length > 0) {
       // 如果找到重複的標題，返回連結
