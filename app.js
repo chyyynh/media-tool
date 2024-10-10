@@ -1,6 +1,9 @@
 const axios = require("axios"); // 發送 HTTP 請求
 const cheerio = require("cheerio"); // 解析 HTML
+const fs = require("fs"); // 引入 fs 模塊
+const path = require("path"); // 引入 path 模塊
 const { Telegraf } = require("telegraf"); // Telegram Bot API
+const { getTranslationText } = require("lingva-scraper");
 require("dotenv").config(); // 載入環境變數
 
 // 設置 telegram API
@@ -10,22 +13,68 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 const HACKMD_API_URL = "https://api.hackmd.io/v1/teams/funblocks/notes";
 const HACKMD_API_TOKEN = process.env.HACKMD_API_TOKEN; // HackMD API Token
 
+const AZURE_API_URL = "https://api.cognitive.microsofttranslator.com/"; // 端點
+const AZURE_API_KEY = process.env.AZURE_API_KEY; // 在此填入你的 API key
+
+// 定義等待函數
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // Lingva Translate API 函數
 async function translateWithLingva(text) {
   const lingvaUrl = `https://lingva.ml/api/v1/en/zh/`;
-
   try {
-    // 使用 POST 請求將 text 作為請求的主體
     const response = await axios.get(
       `${lingvaUrl}${encodeURIComponent(text.trim())}`
     );
-
     console.log(response.data.translation);
-    // 假設 API 回應的結構未變更，這裡也需確認 API 文件
     return response.data.translation;
   } catch (error) {
-    console.error("翻譯失敗:", error);
-    return null; // 或者根據需要處理錯誤
+    console.error("翻譯失敗:");
+    fs.appendFileSync(
+      path.join(__dirname, "error_log.txt"),
+      JSON.stringify(error) + "\n",
+      "utf8"
+    );
+    return error; // 或者根據需要處理錯誤
+  }
+}
+
+async function translateWithAzure(text) {
+  const url = `${AZURE_API_URL}/translate?api-version=3.0&from=en&to=zh-Hans`;
+
+  try {
+    const response = await axios({
+      method: "post",
+      url: url,
+      headers: {
+        "Ocp-Apim-Subscription-Key": AZURE_API_KEY,
+        "Ocp-Apim-Subscription-Region": "eastasia", // 必須設定
+        "Content-Type": "application/json",
+      },
+      data: [
+        {
+          Text: text,
+        },
+      ],
+    });
+
+    const translation = response.data[0].translations[0].text;
+    console.log(`翻譯結果: ${translation}`);
+    return translation;
+  } catch (error) {
+    console.error("翻譯失敗:");
+
+    // 將錯誤訊息寫入文件
+    fs.appendFileSync(
+      path.join(__dirname, "error_log.txt"),
+      JSON.stringify(error.response ? error.response.data : error.message) +
+        "\n",
+      "utf8"
+    );
+
+    return null;
   }
 }
 
@@ -41,14 +90,19 @@ async function fetchArticleContent(url) {
 
     // Get the title and convert to Markdown header
     const title = $("title").text();
-    const Title = `# ${title}\n\n`; // Markdown 標題
+    const Title = `# ${title}\n ${await translateWithAzure(title)} \n\n`; // Markdown 標題
+    wait(500);
 
     // 抓取所有段落和圖片，按出現順序加入
-    $("p, img").each(async (index, element) => {
+    const elements = $("p, img"); // 將選取的元素儲存到一個變數中
+    for (let element of elements) {
       if ($(element).is("p")) {
-        // 如果是段落，加入文字
         contentArray.push($(element).text());
-        contentArray.push(await translateWithLingva($(element).text()));
+        const translatedText = await translateWithAzure($(element).text());
+
+        console.log(translatedText);
+        contentArray.push(translatedText);
+        wait(1000);
       } else if ($(element).is("img")) {
         let imgSrc = $(element).attr("src");
         const imgId = $(element).attr("id");
@@ -63,7 +117,7 @@ async function fetchArticleContent(url) {
           contentArray.push(`![Image](${imgSrc})`); // Markdown 格式圖片
         }
       }
-    });
+    }
 
     // 將混合的內容用兩個換行符號分隔，組織成 Markdown 格式
     const fullContent = `${Title}${contentArray.join("\n\n")}`;
