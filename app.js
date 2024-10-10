@@ -1,9 +1,6 @@
 const axios = require("axios"); // 發送 HTTP 請求
 const cheerio = require("cheerio"); // 解析 HTML
-const fs = require("fs"); // 引入 fs 模塊
-const path = require("path"); // 引入 path 模塊
 const { Telegraf } = require("telegraf"); // Telegram Bot API
-const { getTranslationText } = require("lingva-scraper");
 require("dotenv").config(); // 載入環境變數
 
 // 設置 telegram API
@@ -16,33 +13,8 @@ const HACKMD_API_TOKEN = process.env.HACKMD_API_TOKEN; // HackMD API Token
 const AZURE_API_URL = "https://api.cognitive.microsofttranslator.com/"; // 端點
 const AZURE_API_KEY = process.env.AZURE_API_KEY; // 在此填入你的 API key
 
-// 定義等待函數
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Lingva Translate API 函數
-async function translateWithLingva(text) {
-  const lingvaUrl = `https://lingva.ml/api/v1/en/zh/`;
-  try {
-    const response = await axios.get(
-      `${lingvaUrl}${encodeURIComponent(text.trim())}`
-    );
-    console.log(response.data.translation);
-    return response.data.translation;
-  } catch (error) {
-    console.error("翻譯失敗:");
-    fs.appendFileSync(
-      path.join(__dirname, "error_log.txt"),
-      JSON.stringify(error) + "\n",
-      "utf8"
-    );
-    return error; // 或者根據需要處理錯誤
-  }
-}
-
 async function translateWithAzure(text) {
-  const url = `${AZURE_API_URL}/translate?api-version=3.0&from=en&to=zh-Hans`;
+  const url = `${AZURE_API_URL}/translate?api-version=3.0&from=en&to=zh-Hant`;
 
   try {
     const response = await axios({
@@ -61,19 +33,10 @@ async function translateWithAzure(text) {
     });
 
     const translation = response.data[0].translations[0].text;
-    console.log(`翻譯結果: ${translation}`);
+    console.log(`翻譯結果: ${translation} \n`);
     return translation;
   } catch (error) {
-    console.error("翻譯失敗:");
-
-    // 將錯誤訊息寫入文件
-    fs.appendFileSync(
-      path.join(__dirname, "error_log.txt"),
-      JSON.stringify(error.response ? error.response.data : error.message) +
-        "\n",
-      "utf8"
-    );
-
+    console.error("翻譯失敗:", error);
     return null;
   }
 }
@@ -86,12 +49,13 @@ async function fetchArticleContent(url) {
 
     // Create an array to hold the mixed content (text and images)
     const contentArray = [];
-    // const translatedContentArray = [];
 
     // Get the title and convert to Markdown header
     const title = $("title").text();
-    const Title = `# ${title}\n ${await translateWithAzure(title)} \n\n`; // Markdown 標題
+    const Title = `# ${title} ${await translateWithAzure(title)} \n\n`; // Markdown 標題
     wait(500);
+
+    const articleLink = `原文連結: ${url}`;
 
     // 抓取所有段落和圖片，按出現順序加入
     const elements = $("p, img"); // 將選取的元素儲存到一個變數中
@@ -99,28 +63,33 @@ async function fetchArticleContent(url) {
       if ($(element).is("p")) {
         contentArray.push($(element).text());
         const translatedText = await translateWithAzure($(element).text());
-
         console.log(translatedText);
         contentArray.push(translatedText);
         wait(1000);
       } else if ($(element).is("img")) {
-        let imgSrc = $(element).attr("src");
-        const imgId = $(element).attr("id");
-        const imgAlt = $(element).attr("alt");
+        if (
+          !$(element).hasClass("social-image") &&
+          !$(element).hasClass("navbar-logo") &&
+          !$(element).hasClass("_1sjywpl0 bc5nci19k bc5nci4t0 bc5nci4ow") // mirror pfp
+        ) {
+          let imgSrc = $(element).attr("src");
+          const imgId = $(element).attr("id");
+          const imgAlt = $(element).attr("alt");
 
-        // 處理相對路徑
-        if (imgSrc && !imgSrc.startsWith("http")) {
-          imgSrc = new URL(imgSrc, url).href; // 將相對路徑轉換為絕對路徑
-        }
+          // 處理相對路徑
+          if (imgSrc && !imgSrc.startsWith("http")) {
+            imgSrc = new URL(imgSrc, url).href; // 將相對路徑轉換為絕對路徑
+          }
 
-        if (imgSrc) {
-          contentArray.push(`![Image](${imgSrc})`); // Markdown 格式圖片
+          if (imgSrc) {
+            contentArray.push(`![Image](${imgSrc})`); // Markdown 格式圖片
+          }
         }
       }
     }
 
     // 將混合的內容用兩個換行符號分隔，組織成 Markdown 格式
-    const fullContent = `${Title}${contentArray.join("\n\n")}`;
+    const fullContent = `${Title}${articleLink}${contentArray.join("\n\n")}`;
 
     // 返回最終的 Markdown 內容
     return { title: title, content: fullContent };
@@ -155,7 +124,7 @@ async function postToHackMD(title, content) {
       return "發佈到 HackMD 失敗，請稍後再試。";
     }
   } catch (error) {
-    console.error("發佈到 HackMD 失敗:", error); // 更詳細的錯誤輸出
+    console.error("發佈到 HackMD 失敗:", error);
   }
 }
 
@@ -208,12 +177,13 @@ async function isArticleUploaded(title) {
       `https://api.hackmd.io/v1/teams/funblocks/notes`,
       {
         headers: {
-          Authorization: `Bearer ${HACKMD_API_TOKEN}`, // 替換成你的 API Key
+          Authorization: `Bearer ${HACKMD_API_TOKEN}`,
         },
       }
     );
 
-    const notes = response.data; // 獲取筆記數據
+    // 獲取筆記數據
+    const notes = response.data;
 
     // 找到所有重複標題的筆記連結
     const duplicateLinks = notes
@@ -222,13 +192,17 @@ async function isArticleUploaded(title) {
 
     if (duplicateLinks.length > 0) {
       // 如果找到重複的標題，返回連結
-      return duplicateLinks.join(", "); // 返回所有重複標題的連結
+      return duplicateLinks.join(", ");
+      // 返回所有重複標題的連結
     } else {
-      // 沒有重複的標題
-      return 0; // 或者返回 null, 根據需求
+      return 0;
     }
   } catch (error) {
     console.error("檢查上傳狀態時出錯:", error);
-    return null; // 或者根據需要處理錯誤
+    return null;
   }
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
