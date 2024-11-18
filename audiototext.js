@@ -5,6 +5,8 @@ const { Telegraf } = require("telegraf"); // Telegram Bot API
 require("dotenv").config(); // 載入環境變數
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+const AZURE_SPEECH_API_URL = "https://eastasia.api.cognitive.microsoft.com/";
+const AZURE_API_KEY = process.env.AZURE_SPEECH_API_KEY; // 在此填入你的 API key
 
 // 1. 提取 YouTube 音訊
 async function downloadAudio(youtubeURL) {
@@ -13,12 +15,17 @@ async function downloadAudio(youtubeURL) {
   await youtubedl(youtubeURL, {
     extractAudio: true,
     audioFormat: "mp3",
+    ffmpegLocation: "/path/to/ffmpeg", // 確保有正確安裝 ffmpeg
     output: outputPath,
   });
 
   console.log("Audio downloaded:", outputPath);
   return outputPath;
 }
+
+// audio to text
+// https://learn.microsoft.com/zh-tw/azure/ai-services/speech-service/fast-transcription-create?tabs=locale-specified
+// https://learn.microsoft.com/zh-tw/azure/ai-services/openai/whisper-quickstart?wt.mc_id=searchAPI_azureportal_inproduct_rmskilling&sessionId=8d29906dfebe426c9a3567df716f9d81&tabs=command-line%2Cpython-new%2Ctypescript-key%2Ctypescript-keyless&pivots=programming-language-javascript
 
 bot.on("text", async (ctx) => {
   const url = ctx.message.text;
