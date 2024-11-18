@@ -53,7 +53,6 @@ async function fetchArticleContent(url) {
     // Get the title and convert to Markdown header
     const title = $("title").text();
     const Title = `# ${title} ${await translateWithAzure(title)} \n\n`; // Markdown 標題
-    wait(500);
 
     const articleLink = `原文連結: ${url}`;
 
@@ -65,7 +64,6 @@ async function fetchArticleContent(url) {
         const translatedText = await translateWithAzure($(element).text());
         console.log(translatedText);
         contentArray.push(translatedText);
-        wait(1000);
       } else if ($(element).is("img")) {
         if (
           !$(element).hasClass("social-image") &&
@@ -201,8 +199,4 @@ async function isArticleUploaded(title) {
     console.error("檢查上傳狀態時出錯:", error);
     return null;
   }
-}
-
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
