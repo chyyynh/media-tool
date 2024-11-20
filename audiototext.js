@@ -2,11 +2,19 @@ const youtubedl = require("youtube-dl-exec");
 const ffmpeg = require("fluent-ffmpeg");
 const fs = require("fs");
 const { Telegraf } = require("telegraf"); // Telegram Bot API
+const sdk = require("microsoft-cognitiveservices-speech-sdk");
 require("dotenv").config(); // 載入環境變數
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 const AZURE_SPEECH_API_URL = "https://eastasia.api.cognitive.microsoft.com/";
 const AZURE_API_KEY = process.env.AZURE_SPEECH_API_KEY; // 在此填入你的 API key
+
+// This example requires environment variables named "SPEECH_KEY" and "SPEECH_REGION"
+const speechConfig = sdk.SpeechConfig.fromSubscription(
+  process.env.AZURE_SPEECH_API_KEY,
+  process.env.SPEECH_REGION
+);
+speechConfig.speechRecognitionLanguage = "en-US";
 
 // 1. 提取 YouTube 音訊
 async function downloadAudio(youtubeURL) {
@@ -21,6 +29,39 @@ async function downloadAudio(youtubeURL) {
 
   console.log("Audio downloaded:", outputPath);
   return outputPath;
+}
+
+// This example requires environment variables named "SPEECH_KEY" and "SPEECH_REGION"
+
+function fromFile() {
+  let audioConfig = sdk.AudioConfig.fromWavFileInput(
+    fs.readFileSync("audio.webm")
+  );
+  let speechRecognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+
+  speechRecognizer.recognizeOnceAsync((result) => {
+    switch (result.reason) {
+      case sdk.ResultReason.RecognizedSpeech:
+        console.log(`RECOGNIZED: Text=${result.text}`);
+        break;
+      case sdk.ResultReason.NoMatch:
+        console.log("NOMATCH: Speech could not be recognized.");
+        break;
+      case sdk.ResultReason.Canceled:
+        const cancellation = sdk.CancellationDetails.fromResult(result);
+        console.log(`CANCELED: Reason=${cancellation.reason}`);
+
+        if (cancellation.reason == sdk.CancellationReason.Error) {
+          console.log(`CANCELED: ErrorCode=${cancellation.ErrorCode}`);
+          console.log(`CANCELED: ErrorDetails=${cancellation.errorDetails}`);
+          console.log(
+            "CANCELED: Did you set the speech resource key and region values?"
+          );
+        }
+        break;
+    }
+    speechRecognizer.close();
+  });
 }
 
 // audio to text
@@ -42,6 +83,7 @@ bot.on("text", async (ctx) => {
     ctx.reply("音訊下載完成！開始進行語音轉文字處理。");
 
     // 步驟 2: 語音轉文字
+    fromFile();
     // const transcription = await transcribeAudioGoogle(outputFilePath); // 或 transcribeAudioWhisper(outputFilePath)
     // bot.sendMessage(chatId, `轉文字結果：\n\n${transcription}`);
   } catch (error) {
