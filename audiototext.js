@@ -1,5 +1,4 @@
 const youtubedl = require("youtube-dl-exec");
-const ffmpeg = require("fluent-ffmpeg");
 const fs = require("fs");
 const { Telegraf } = require("telegraf"); // Telegram Bot API
 const sdk = require("microsoft-cognitiveservices-speech-sdk");
@@ -18,12 +17,12 @@ speechConfig.speechRecognitionLanguage = "en-US";
 
 // 1. 提取 YouTube 音訊
 async function downloadAudio(youtubeURL) {
-  const outputPath = "./audio.mp3";
+  const outputPath = "./audio.wav";
 
   await youtubedl(youtubeURL, {
     extractAudio: true,
-    audioFormat: "mp3",
-    ffmpegLocation: "/path/to/ffmpeg", // 確保有正確安裝 ffmpeg
+    audioFormat: "wav",
+    ffmpegLocation: "/opt/homebrew/bin/ffmpeg", // 確保有正確安裝 ffmpeg
     output: outputPath,
   });
 
@@ -33,35 +32,67 @@ async function downloadAudio(youtubeURL) {
 
 // This example requires environment variables named "SPEECH_KEY" and "SPEECH_REGION"
 
-function fromFile() {
-  let audioConfig = sdk.AudioConfig.fromWavFileInput(
-    fs.readFileSync("audio.webm")
-  );
-  let speechRecognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+function audiotoText() {
+  return new Promise((resolve, reject) => {
+    let sentences = [];
+    let audioConfig = sdk.AudioConfig.fromWavFileInput(
+      fs.readFileSync("audio.wav")
+    );
+    let speechRecognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
 
-  speechRecognizer.recognizeOnceAsync((result) => {
-    switch (result.reason) {
-      case sdk.ResultReason.RecognizedSpeech:
-        console.log(`RECOGNIZED: Text=${result.text}`);
-        break;
-      case sdk.ResultReason.NoMatch:
-        console.log("NOMATCH: Speech could not be recognized.");
-        break;
-      case sdk.ResultReason.Canceled:
-        const cancellation = sdk.CancellationDetails.fromResult(result);
-        console.log(`CANCELED: Reason=${cancellation.reason}`);
+    // 開始語音辨識
+    speechRecognizer.startContinuousRecognitionAsync(
+      () => {
+        console.log("Recognition started.");
+      },
+      (err) => {
+        console.log("Error starting recognition:", err);
+        reject(err); // 若啟動識別過程出錯，拒絕 Promise
+      }
+    );
 
-        if (cancellation.reason == sdk.CancellationReason.Error) {
-          console.log(`CANCELED: ErrorCode=${cancellation.ErrorCode}`);
-          console.log(`CANCELED: ErrorDetails=${cancellation.errorDetails}`);
-          console.log(
-            "CANCELED: Did you set the speech resource key and region values?"
-          );
-        }
-        break;
-    }
-    speechRecognizer.close();
+    // 當語音辨識到文字時
+    speechRecognizer.recognized = (s, e) => {
+      console.log("Recognition event triggered");
+      if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
+        sentences.push(e.result.text); // 把每次辨識的文字推進陣列
+        console.log(`RECOGNIZED: Text=${e.result.text}`);
+        console.log("Sentences array:", sentences); // 顯示目前的 sentences 陣列
+      }
+    };
+
+    // 處理識別過程中可能出現的錯誤
+    speechRecognizer.canceled = (s, e) => {
+      const cancellation = sdk.CancellationDetails.fromResult(e.result);
+      console.log(`CANCELED: Reason=${cancellation.reason}`);
+
+      if (cancellation.reason === sdk.CancellationReason.Error) {
+        console.log(`CANCELED: ErrorCode=${cancellation.ErrorCode}`);
+        console.log(`CANCELED: ErrorDetails=${cancellation.errorDetails}`);
+        reject(new Error(cancellation.errorDetails)); // 如果發生錯誤，拒絕 Promise
+      }
+    };
+
+    // 監聽語音識別結束事件
+    speechRecognizer.sessionStopped = (s, e) => {
+      console.log("Recognition session stopped.");
+      resolve(sentences); // 當識別結束時返回 sentences
+    };
   });
+}
+
+async function processAudio() {
+  const recognizedText = await audiotoText();
+  console.log(`Recognized Text`, recognizedText);
+
+  let markdownContent = `# Recognized Speech Text\n\n`;
+
+  recognizedText.forEach((sentence, index) => {
+    markdownContent += `${sentence}`;
+  });
+
+  fs.writeFileSync("recognized_text.md", markdownContent, "utf8");
+  console.log("Markdown file generated with multiple sentences!");
 }
 
 // audio to text
@@ -83,7 +114,7 @@ bot.on("text", async (ctx) => {
     ctx.reply("音訊下載完成！開始進行語音轉文字處理。");
 
     // 步驟 2: 語音轉文字
-    fromFile();
+    processAudio();
     // const transcription = await transcribeAudioGoogle(outputFilePath); // 或 transcribeAudioWhisper(outputFilePath)
     // bot.sendMessage(chatId, `轉文字結果：\n\n${transcription}`);
   } catch (error) {
