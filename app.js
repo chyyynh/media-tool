@@ -41,6 +41,13 @@ async function translateWithAzure(text) {
   }
 }
 
+function formatTitle(title) {
+  return title
+    .toLowerCase() // 轉成小寫
+    .replace(/[^\w\s]/g, "") // 移除標點符號 (保留字母、數字和空白)
+    .replace(/\s+/g, "-"); // 將空格轉成 "-"
+}
+
 async function fetchArticleContent(url) {
   try {
     const response = await axios.get(url);
@@ -53,6 +60,19 @@ async function fetchArticleContent(url) {
     // Get the title and convert to Markdown header
     const title = $("title").text();
     const Title = `# ${title} ${await translateWithAzure(title)} \n\n`; // Markdown 標題
+
+    const metadata = [
+      `---\n`,
+      `title: "${await translateWithAzure(title)}"\n`,
+      `author: ""\n`,
+      `translateBy: ""\n`,
+      `publishedAt: ""\n`,
+      `image: ""\n`,
+      `link: "${formatTitle(title)}"\n`,
+      `summary: ""\n`,
+      `OrginalLink: "${url}"\n`,
+      `---\n\n`,
+    ];
 
     const articleLink = `原文連結: ${url}`;
 
@@ -87,7 +107,9 @@ async function fetchArticleContent(url) {
     }
 
     // 將混合的內容用兩個換行符號分隔，組織成 Markdown 格式
-    const fullContent = `${Title}${articleLink}${contentArray.join("\n\n")}`;
+    const fullContent = `${metadata.join(
+      ""
+    )}${Title}${articleLink}${contentArray.join("\n\n")}`;
 
     // 返回最終的 Markdown 內容
     return { title: title, content: fullContent };

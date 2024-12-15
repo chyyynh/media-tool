@@ -6,6 +6,8 @@ require("dotenv").config(); // 載入環境變數
 // HackMD API 設定
 const HACKMD_API_URL = "https://api.hackmd.io/v1";
 const HACKMD_API_TOKEN = process.env.HACKMD_API_TOKEN;
+const HackMDteamid = "funblocks";
+const HackMDteam_API_URL = `${HACKMD_API_URL}/teams/${HackMDteamid}/notes/`;
 
 // 翻譯 Azure Function
 async function translateWithAzure(text) {
@@ -39,7 +41,7 @@ async function translateWithAzure(text) {
 
 // 從 HackMD 取得文件內容
 async function fetchHackMDDocument(docId) {
-  console.log(`${HACKMD_API_URL}/notes/${docId}`);
+  console.log(`${HACKMD_API_URL}/${HackMDteamid}/notes/${docId}`);
   try {
     const response = await axios.get(`${HACKMD_API_URL}/notes/${docId}`, {
       headers: {
@@ -87,7 +89,7 @@ async function translateHackMD(docId) {
   // Update Hackmd
   try {
     const response = await axios.post(
-      `https://api.hackmd.io/v1/notes/`,
+      `${HackMDteam_API_URL}`,
       {
         title: "title",
         content: translatedContent,
