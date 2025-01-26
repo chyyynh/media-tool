@@ -9,6 +9,7 @@
     "fs": "^0.0.1-security",
     "gray-matter": "^4.0.3",
     "microsoft-cognitiveservices-speech-sdk": "^1.41.0",
+    "node-telegram-bot-api": "^0.66.0",
     "supabase": "^2.6.8",
     "telegraf": "^4.16.3",
     "youtube-dl-exec": "^3.0.10"

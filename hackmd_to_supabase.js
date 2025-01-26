@@ -70,7 +70,8 @@ async function uploadHackMDToSupabase(hackmdDocId) {
 }
 
 // 範例用法：請替換成你的 HackMD Document ID
-const hackmdDocId = "SJpvFuAPye"; //  需要使用者提供 HackMD Document ID
+// https://hackmd.io/@funblocks/H1KnnOXdkg
+const hackmdDocId = "H1KnnOXdkg"; //  需要使用者提供 HackMD Document ID
 uploadHackMDToSupabase(hackmdDocId);
 
 console.log(

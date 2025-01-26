@@ -1,10 +1,11 @@
-const axios = require("axios"); // 發送 HTTP 請求
-const cheerio = require("cheerio"); // 解析 HTML
-const { Telegraf } = require("telegraf"); // Telegram Bot API
-require("dotenv").config(); // 載入環境變數
+import * as axios from "axios";
+import * as cheerio from "cheerio"; // 解析 HTML
+import * as Telegraf from "telegraf"; // Telegram Bot API
+import * as dotenv from "dotenv"; // 載入環境變數
+dotenv.config(); // 載入環境變數
 
 // 設置 telegram API
-const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
+const bot = new Telegraf.Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
 // 設置 HackMD API Token 和 API URL
 const HACKMD_API_URL = "https://api.hackmd.io/v1/teams/funblocks/notes";
@@ -13,11 +14,11 @@ const HACKMD_API_TOKEN = process.env.HACKMD_API_TOKEN; // HackMD API Token
 const AZURE_API_URL = "https://api.cognitive.microsofttranslator.com/"; // 端點
 const AZURE_API_KEY = process.env.AZURE_API_KEY; // 在此填入你的 API key
 
-async function translateWithAzure(text) {
+export async function translateWithAzure(text) {
   const url = `${AZURE_API_URL}/translate?api-version=3.0&from=en&to=zh-Hant`;
 
   try {
-    const response = await axios({
+    const response = await axios.default({
       method: "post",
       url: url,
       headers: {
@@ -41,16 +42,16 @@ async function translateWithAzure(text) {
   }
 }
 
-function formatTitle(title) {
+export function formatTitle(title) {
   return title
     .toLowerCase() // 轉成小寫
     .replace(/[^\w\s]/g, "") // 移除標點符號 (保留字母、數字和空白)
     .replace(/\s+/g, "-"); // 將空格轉成 "-"
 }
 
-async function fetchArticleContent(url) {
+export async function fetchArticleContent(url) {
   try {
-    const response = await axios.get(url);
+    const response = await axios.default.get(url);
     const html = response.data;
     const $ = cheerio.load(html);
 
@@ -63,15 +64,15 @@ async function fetchArticleContent(url) {
 
     const metadata = [
       `---\n`,
-      `title: "${await translateWithAzure(title)}"\n`,
-      `author: ""\n`,
-      `translateBy: ""\n`,
-      `publishedAt: ""\n`,
-      `image: ""\n`,
-      `link: "${formatTitle(title)}"\n`,
-      `summary: ""\n`,
-      `OrginalLink: "${url}"\n`,
-      `---\n\n`,
+      `"title": "${await translateWithAzure(title)}"\n`,
+      `"author": ""\n`,
+      `"translateBy": ""\n`,
+      `"publishedAt": ""\n`,
+      `"image": ""\n`,
+      `"link": "${formatTitle(title)}"\n`,
+      `"summary": ""\n`,
+      `"OrginalLink": "${url}"\n`,
+      `---\n`,
     ];
 
     const articleLink = `原文連結: ${url}`;
@@ -118,9 +119,9 @@ async function fetchArticleContent(url) {
   }
 }
 
-async function postToHackMD(title, content) {
+export async function postToHackMD(title, content) {
   try {
-    const response = await axios.post(
+    const response = await axios.default.post(
       HACKMD_API_URL,
       {
         title: title,
@@ -182,7 +183,7 @@ bot.launch();
 console.log("Telegram bot 已啟動");
 
 // 檢查是否為有效的 URL
-function isValidUrl(string) {
+export function isValidUrl(string) {
   try {
     new URL(string);
     return true;
@@ -191,9 +192,9 @@ function isValidUrl(string) {
   }
 }
 
-async function isArticleUploaded(title) {
+export async function isArticleUploaded(title) {
   try {
-    const response = await axios.get(
+    const response = await axios.default.get(
       `https://api.hackmd.io/v1/teams/funblocks/notes`,
       {
         headers: {
