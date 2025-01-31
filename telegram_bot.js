@@ -9,7 +9,7 @@ import {
   isValidUrl,
   isArticleUploaded,
   formatTitle,
-} from "./app.js";
+} from "./translate_to_hackmd.js";
 
 dotenv.config(); // 載入環境變數
 
