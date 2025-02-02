@@ -82,7 +82,7 @@ export async function fetchArticleContent(url) {
     const articleLink = `原文連結: ${url}`;
 
     // 抓取所有段落、圖片和連結，按出現順序加入
-    const elements = $("p, img, a"); // 選取段落、圖片和連結
+    const elements = $("p, img, a, h1"); // 選取段落、圖片和連結
     let currentParagraph = ""; // 用於累積段落文字
     for (let element of elements) {
       if ($(element).is("p")) {
@@ -90,11 +90,15 @@ export async function fetchArticleContent(url) {
           contentArray.push(currentParagraph); // 先加入累積的段落
           const translatedText = await translateWithAzure(currentParagraph);
           const halftranslatedText = toHalfWidth(translatedText); // 轉換全形括號為半形
-          console.log(translatedText);
           contentArray.push(halftranslatedText);
           currentParagraph = ""; // 清空段落累積器
         }
         currentParagraph += $(element).text() + "\n\n"; // 開始新的段落
+      } else if ($(element).is("h1")) {
+        contentArray.push(`## ${$(element).text()}`);
+        const translatedText = await translateWithAzure($(element).text());
+        const halftranslatedText = toHalfWidth(translatedText); // 轉換全形括號為半形
+        contentArray.push(`## ${halftranslatedText}`);
       } else if ($(element).is("img")) {
         if (
           !$(element).hasClass("social-image") &&
@@ -126,7 +130,7 @@ export async function fetchArticleContent(url) {
             `[${linkText}](${linkHref})`
           );
         } else {
-          currentParagraph += ` [${linkText}](${linkHref})`; // 若沒找到，則附加
+          currentParagraph += `[${linkText}](${linkHref})`; // 若沒找到，則附加
         }
       }
     }
