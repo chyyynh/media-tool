@@ -141,7 +141,7 @@ async function processGames() {
       }
 
       // Add delay between requests to respect rate limits
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      await new Promise((resolve) => setTimeout(resolve, 305000));
     }
 
     console.log("Processing completed");

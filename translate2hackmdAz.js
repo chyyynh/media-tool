@@ -118,7 +118,8 @@ export async function fetchArticleContent(url) {
             contentArray.push(`![Image](${imgSrc})`); // Markdown 格式圖片
           }
         }
-      } else if ($(element).is("a[href]")) {
+      } /*
+      else if ($(element).is("a[href]")) {
         const linkText = $(element).text();
         const linkHref = $(element).attr("href");
 
@@ -132,7 +133,7 @@ export async function fetchArticleContent(url) {
         } else {
           currentParagraph += `[${linkText}](${linkHref})`; // 若沒找到，則附加
         }
-      }
+      }*/
     }
     // 處理最後一段
     if (currentParagraph) {

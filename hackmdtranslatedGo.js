@@ -14,36 +14,6 @@ const HackMDteam_API_URL = `${HACKMD_API_URL}/teams/${HackMDteamid}/notes/`;
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-// 翻譯 Azure Function
-async function translateWithAzure(text) {
-  const AZURE_API_URL = "https://api.cognitive.microsofttranslator.com";
-  const AZURE_API_KEY = process.env.AZURE_API_KEY;
-  const region = "eastasia";
-
-  try {
-    const response = await axios({
-      method: "post",
-      url: `${AZURE_API_URL}/translate?api-version=3.0&from=en&to=zh-Hant`,
-      headers: {
-        "Ocp-Apim-Subscription-Key": AZURE_API_KEY,
-        "Ocp-Apim-Subscription-Region": region,
-        "Content-Type": "application/json",
-      },
-      data: [
-        {
-          Text: text,
-        },
-      ],
-    });
-
-    const translation = response.data[0].translations[0].text;
-    return translation;
-  } catch (error) {
-    console.error("翻譯失敗:", error);
-    return null;
-  }
-}
-
 // 翻譯 Google Generative AI Function
 async function translateWithGoogle(text) {
   try {
@@ -81,27 +51,8 @@ async function translateHackMD(docId) {
   const content = await fetchHackMDDocument(docId);
   if (!content) return;
 
-  // 2. 翻譯內容
-  const lines = content.split("\n"); // 按行分割
-  const translatedLines = [];
-
-  for (const line of lines) {
-    if (line.trim() === "") {
-      // 保留空行
-      translatedLines.push("");
-      continue;
-    }
-    const translatedLine = await translateWithGoogle(line);
-    if (translatedLine) {
-      // 加入原文和翻譯
-      translatedLines.push(line); // 原文
-      translatedLines.push(translatedLine); // 翻譯
-    } else {
-      translatedLines.push(line); // 如果翻譯失敗則保留原文
-    }
-  }
-
-  const translatedContent = translatedLines.join("\n");
+  // 2. 翻譯整篇內容
+  const translatedContent = await translateWithGoogle(content);
 
   // Update Hackmd
   try {

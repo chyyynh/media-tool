@@ -3,6 +3,7 @@
 import { createClient } from "@supabase/supabase-js";
 import axios from "axios";
 import matter from "gray-matter";
+import readline from "readline";
 
 // 讀取 .env 檔案以取得環境變數
 import dotenv from "dotenv";
@@ -31,7 +32,12 @@ async function uploadHackMDToSupabase(hackmdDocId) {
     const fileContent = response.data.content;
 
     // 使用 gray-matter 解析 frontmatter 和內容
-    const { data: frontmatter, content } = matter(fileContent);
+    const {
+      data: frontmatter,
+      content,
+      related_game,
+      related_tag,
+    } = matter(fileContent);
 
     // 確保 frontmatter 和 content 都存在
     if (!frontmatter || !content) {
@@ -42,22 +48,22 @@ async function uploadHackMDToSupabase(hackmdDocId) {
     // 準備要插入 Supabase 的資料
     const postData = {
       metadata: {
-        link: frontmatter.link,
-        image: frontmatter.image,
         title: frontmatter.title,
         author: frontmatter.author,
+        image: frontmatter.image,
+        link: frontmatter.link,
         summary: frontmatter.summary,
         originalLink: frontmatter.OrginalLink,
         publishedAt: frontmatter.publishedAt,
         translatedBy: frontmatter.translateBy,
       },
       content: content,
+      related_game: related_game,
+      related_tag: related_tag,
     };
 
     // 插入資料到 Supabase 表格 (表格名稱為 'articles_draft')
-    const { data, error } = await supabase
-      .from("articles_draft")
-      .insert([postData]);
+    const { data, error } = await supabase.from("articles").insert([postData]);
 
     if (error) {
       console.error("Supabase 插入錯誤:", error);
@@ -69,11 +75,11 @@ async function uploadHackMDToSupabase(hackmdDocId) {
   }
 }
 
-// 範例用法：請替換成你的 HackMD Document ID
-// https://hackmd.io/@funblocks/H1KnnOXdkg
-const hackmdDocId = "H1KnnOXdkg"; //  需要使用者提供 HackMD Document ID
-uploadHackMDToSupabase(hackmdDocId);
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 
-console.log(
-  "hackmd_to_supabase.js 檔案已更新，使用 HackMD API 讀取檔案內容。請修改 hackmdDocId 變數為你的 HackMD Document ID，並確保已正確設定 Supabase 環境變數。"
-);
+rl.question("請輸入 HackMD Document ID: ", (docId) => {
+  uploadHackMDToSupabase(docId).then(() => rl.close());
+});
